@@ -150,7 +150,11 @@ region = us-ashburn-1
     Type: Remote JWKS
     URI: https://[.....].okta.com/oauth2/default/v1/keys
 
-==== Create an authentication policy in API Gateway using  Oracle Cloud Identity
+`Now you can test your API Gateway with a rest client like curl, postman, etc.`
+
+==== Create a Gateway Deployment with security using  Oracle Cloud Identity 
+
+`In the previous scenario we expose the function as a gateway using Okta like the identity management. In the next scenario we are going to use the Oracle Cloud Identity.`
 
 * Log in your console as Administrator to create a client application
 
@@ -158,41 +162,69 @@ region = us-ashburn-1
 
     Name : OGBT GW OC
     Description: Server that provides via REST APIs function
-    Configure this application as a client now : Client Credentials
-    In resources Expose APIs to Other Applications
-
-a) Create an authentication policy in API Gateway using Okta
-b)  Create a Route to Your Function
-
-Principal Audience: https://idcs-b2[.....].identity.oraclecloud.com:443
-urn:opc:lbaas:logicalguid=idcs-b2[.....]
+    Configure this application as a client now : `Client Credentials`
+    In resources > Expose APIs to Other Applications
+    	Primary Audience: https://idcs-b2[.....].identity.oraclecloud.com:443
+    	Secondary Audiences: urn:opc:lbaas:logicalguid=idcs-b2[.....]
 
 Copy the client id and secrete id
 
 Client ID:  <CLIENT-ID>
-
 Client Secret: <CLIENT-SECRET>
 
 Activate the application
 
-2. Create a Gateway Deployment with Oracle Cloud Identity
-Name : api-gw-ogt-oci
-route: /ogbt-oci
+==== Create an authentication policy in API Gateway
 
-Create an authentication policy in API Gateway
+	Name : `api-gw-ogt-oci`	
+	route: `/ogbt-oci`	
+	Authentication Type : `JWT`	
+	Authentication token : `Header`	
+	Header Name : `Authorization`
+	Authentication Scheme : `Bearer`	
+	Allowed Issuers :
+	`https://identity.oraclecloud.com/`	
+	Allowed Audiences: https://idcs-b2[.....].identity.oraclecloud.com:443
+	urn:opc:lbaas:logicalguid=idcs-b2[.....]
+	Public Keys
+    Type: `Remote JWKS`
+	URI: https://idcs-b2[.....].identity.oraclecloud.com/admin/v1/SigningCert/jwk
 
-Authentication Type : JWT
-Authentication token : Header
-Header Name : Authorization
-Authentication Scheme : Bearer
-Allowed Issuers :
-https://identity.oraclecloud.com/
+`Now you can test your API Gateway with a rest client like curl, postman, etc.`
+	
+==== Configure your java application to consume your API Gateway
 
-Allowed Audiences: https://idcs-b2[.....].identity.oraclecloud.com:443
-urn:opc:lbaas:logicalguid=idcs-b2[.....]
+If you want to test the Okta scenario, set the value for the following variables:
 
-Public Keys
-Type:
-Remote JWKS
-URI:
-https://idcs-b2[.....].identity.oraclecloud.com/admin/v1/SigningCert/jwk
+* OKTA-CLIENT_ID
+* OKTA-CLIENT_SECRET
+* OKTA-SCOPE
+* OKTA-ACCOUNT
+* <ORACLE_CLOUD-FUNCTION-API_GATEWAY : API Gateway endpoint + method route
+
+To test the Oracle Cloud Identity scenario set the value for the following variables:
+
+* ORACLE_CLOUD-CLIENT_ID
+* ORACLE_CLOUD-CLIENT_SECRET
+* ORACLE_CLOUD_IDENTITY_MANAGER_ID
+* ORACLE_CLOUD-FUNCTION-API_GATEWAY : API Gateway endpoint + method route
+
+You can run the test case from your IDE or with maven.
+
+For maven, execute: 
+[source,bash]
+----
+mvn test
+----
+
+Besides the previous scenario you can use another scenario using a JAX-RS Client to consume the API GATEWAY.
+
+Navigate to the class `demo.gateway.Constantes` and set the values for:
+
+* TOKEN_URL
+* CLIENT_ID
+* CLIENT_SECRET
+* CLIENT_SCOPE
+* ORACLE_CLOUD_FUNCTION_API_GATEWAY
+
+And run the test once again.

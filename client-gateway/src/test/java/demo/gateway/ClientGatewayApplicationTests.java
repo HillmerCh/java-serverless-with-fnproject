@@ -1,25 +1,24 @@
 package demo.gateway;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import io.restassured.RestAssured;
-import io.restassured.response.Response;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-public class ClientGatewayApplicationTests {
+import org.junit.jupiter.api.Test;
 
-	@BeforeClass
-	public static void setup() {
-		RestAssured.baseURI = "http://localhost";
-		RestAssured.port = 8080;
-	}
+import io.restassured.response.Response;
+
+/**
+ * 
+ * @author ecabrerar
+ * 
+ * @since Aug 26, 2020
+ */
+class ClientGatewayApplicationTests {
 
 	@Test
-	public void should_return_access_token_from_okta() {
+	void should_return_access_token_from_okta() {
 
 		Response response = given().contentType( "application/x-www-form-urlencoded" ).log().all()
 				.formParam( "client_id", "<OKTA-CLIENT_ID>" )
@@ -31,7 +30,7 @@ public class ClientGatewayApplicationTests {
 
 		String accessToken = response.getBody().jsonPath().getString( "access_token" );
 
-		assertFalse( accessToken.isEmpty() );
+	  assertFalse( accessToken.isEmpty());
 
 		given()
 				.header( "Authorization", "Bearer ".concat( accessToken ) )
@@ -42,7 +41,7 @@ public class ClientGatewayApplicationTests {
 
 
 	@Test
-	public void should_return_access_token_from_oracle_cloud_identity() {
+	 void should_return_access_token_from_oracle_cloud_identity() {
 
 		Response response = given().contentType( "application/x-www-form-urlencoded" ).log().all()
 				.formParam( "client_id", "<ORACLE_CLOUD-CLIENT_ID>" )
