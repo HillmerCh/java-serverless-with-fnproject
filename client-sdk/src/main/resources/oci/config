@@ -1,0 +1,6 @@
+[DEFAULT]
+user = ocid1.user.oc1..aaaaaaaa[.....]
+fingerprint = 8c:d5:f1:f7:84:8e:[.....]
+key_file = oci/oci_api_key.pem
+tenancy = ocid1.tenancy.oc1..aaaaaaaaa[.....]
+region = us-ashburn-1

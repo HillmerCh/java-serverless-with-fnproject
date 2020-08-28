@@ -1,0 +1,198 @@
+= Development Java applications with serverless on OCI
+
+
+This repository how to use Docker and Kubernetes with Java Applications.
+
+== Requirements
+
+- Docker: https://www.docker.com/products/docker-desktop
+- Maven: https://maven.apache.org
+- Kubectl: https://kubernetes.io/docs/tasks/tools/install-kubectl/
+- Oracle Cloud ( Functions & API Gateway & Identity Service): https://cloud.oracle.com/home
+- Okta Developer Account: https://developer.okta.com/signup
+
+
+== The Java Application
+
+=== function-app
+
+* Open a console.
+
+* Navigate to where you have this repository code in your file system. Compile and Package the application via maven:
+
+[source,bash]
+----
+ mvn package -f function-app/pom.xml
+----
+
+* Make sure Docker is running. Build a Docker image tagged function-app issuing the command:
+
+[source,bash]
+----
+ docker build -t <Function-Name> function-app/.
+----
+
+* Log in to Oracle Container Registry using the docker login command:
+[source,bash]
+----
+docker login -u '<OBJECY-STORAGE-NAMESPACE>/<USERNAME>' iad.ocir.io
+
+----
+
+* Tag the image that you are going to push to the registry.
+[source,bash]
+----
+docker tag function-app iad.ocir.io/<OBJECY-STORAGE-NAMESPACE>/<Application-Name>/function-app:v1
+----
+
+* Push the Docker image to Oracle Container Registry:
+[source,bash]
+----
+docker push iad.ocir.io/<OBJECY-STORAGE-NAMESPACE>/<Application-Name>/function-app:v1
+----
+
+* Create the function through `Oracle Cloud console > Developer services > Functions`
+using the repository pushed in the previous `<Application-Name>/function-app`
+
+* Invoke the function through the Cloud shell
+[source,bash]
+----
+fn invoke <Application-Name> <Function-Name>
+
+echo -n 'Eudris' | fn invoke <Application-Name> <Function-Name>
+----
+
+== The Clients
+
+=== client-sdk
+
+* Add then oci-java-sdk dependencias to the pom.xml file
+[source,xml]
+----
+<dependency>
+    <groupId>com.oracle.oci.sdk</groupId>
+    <artifactId>oci-java-sdk-common</artifactId>
+    <version>${oci-sdk.version}</version>
+</dependency>
+<dependency>
+    <groupId>com.oracle.oci.sdk</groupId>
+    <artifactId>oci-java-sdk-functions</artifactId>
+    <version>${oci-sdk.version}</version>
+</dependency>
+----
+
+
+* Update the configuration to connect with the Function in Oracle Cloud in link:/client-sdk/src/main/resources/client.properties[client.properties]
+[source,properties]
+----
+invokeEndpoint = https://d55ivyd[.....].us-ashburn-1.functions.oci.oraclecloud.com
+functionId = ocid1.fnfunc.oc1.iad.aaaaaaaaaar[.....]
+
+user = ocid1.user.oc1..aaaaaaaa[.....]
+fingerprint = 8c:d5:f1:f7:84:8e:[.....]
+key_file = oci/oci_api_key.pem
+tenancy = ocid1.tenancy.oc1..aaaaaaaaa[.....]
+region = us-ashburn-1
+----
+
+* Test the client with the test case link:/client-sdk/src/main/java/test/demo/sdk/ClientOCISDKTest.java[ClientOCISDKTest]
+
+* Review the Function Metrics through `Oracle Cloud console > Developer services > Functions > Metrics`
+
+=== client-gateway
+
+==== Expose your Function as API Gateway
+
+* Navigate to Developer Services > API Gateway
+
+
+* Create OCI API Gateway Deployment in OCI In `API Gateway > Gateways` click on Deployments and then Create Deployment
+
+
+==== Create a Gateway Deployment without security.
+
+    Name : api-gw-ogt
+    route: /ogbt
+
+* Create a Route to Your Function
+
+* Make sure you have a policy allow it to execute function as Gateway `Identity > Policies`
+
+    ALLOW any-user to use functions-family in compartment Demo where ALL { request.principal.type= 'ApiGateway' , request.resource.compartment.id = 'ocid1.compartment.oc1..aaaaaaaagsuwidbm4m3rzpcfnefllyozbftfcuvetzqk43b54ar4l5rco5hq' }
+
+==== Create an authentication policy in API Gateway using Okta
+
+
+* Create an Application in Okta
+
+    Name : oci-gw-ogbt
+    Type: Web
+    Client Type : Client Credentials
+
+
+* Create an Scope `API > Authorization Servers`
+
+    Choose your server
+    Ex: default
+
+    Scopes > Add Scope
+    gw-ogbt-auth
+
+* Edit your Gateway Deployment to set the authentication policy
+
+    Authentication Type : JWT
+    Authentication token : Header
+    Header Name : Authorization
+    Authentication Scheme : Bearer
+    Allowed Issuers : https://[.....].okta.com/oauth2/default
+    Allowed Audiences: api://default
+    Public Keys
+    Type: Remote JWKS
+    URI: https://[.....].okta.com/oauth2/default/v1/keys
+
+==== Create an authentication policy in API Gateway using  Oracle Cloud Identity
+
+* Log in your console as Administrator to create a client application
+
+* Create an Applications using `Applications > Add Application > Add Confidential Application`
+
+    Name : OGBT GW OC
+    Description: Server that provides via REST APIs function
+    Configure this application as a client now : Client Credentials
+    In resources Expose APIs to Other Applications
+
+a) Create an authentication policy in API Gateway using Okta
+b)  Create a Route to Your Function
+
+Principal Audience: https://idcs-b2[.....].identity.oraclecloud.com:443
+urn:opc:lbaas:logicalguid=idcs-b2[.....]
+
+Copy the client id and secrete id
+
+Client ID:  <CLIENT-ID>
+
+Client Secret: <CLIENT-SECRET>
+
+Activate the application
+
+2. Create a Gateway Deployment with Oracle Cloud Identity
+Name : api-gw-ogt-oci
+route: /ogbt-oci
+
+Create an authentication policy in API Gateway
+
+Authentication Type : JWT
+Authentication token : Header
+Header Name : Authorization
+Authentication Scheme : Bearer
+Allowed Issuers :
+https://identity.oraclecloud.com/
+
+Allowed Audiences: https://idcs-b2[.....].identity.oraclecloud.com:443
+urn:opc:lbaas:logicalguid=idcs-b2[.....]
+
+Public Keys
+Type:
+Remote JWKS
+URI:
+https://idcs-b2[.....].identity.oraclecloud.com/admin/v1/SigningCert/jwk
